@@ -1,0 +1,111 @@
+﻿<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>JWT in ASP.NET Core Web API</title>
+    </head>
+    <body>
+        <div id="userInfo" style="display: none;">
+            <p>You have entered as: <span id="userName"></span></p>
+            <input type="button" value="Exit" id="logOut" />
+        </div>
+        <div id="loginForm">
+            <h3>Enter on site</h3>
+            <label>Enter Email</label>
+            <input type="email" id="emailLogin" /><br /><br />
+            <label>Enter Password</label>
+            <input type="password" id="passwordLogin" /><br /><br />
+            <input type="submit" id="submitLogin" value="Login" />
+        </div>
+        <div>
+            <input type="submit" id="getDataByLogin" value="Login data" />
+        </div>
+        <div>
+            <input type="submit" id="getDataByRole" value="Role data" />
+        </div>
+        <script>
+            var tokenKey = "accessToken";
+
+            // sending request to the controller AccountController to get token
+            async function getTokenAsync() {
+
+                // getting form data and create object for sending
+                const formData = new FormData();
+                formData.append("grant_type", "password");
+                formData.append("username", document.getElementById("emailLogin").value);
+                formData.append("password", document.getElementById("passwordLogin").value);
+
+                // sending request and getting response
+                const response = await fetch("/token",
+                    {
+                        method: "POST",
+                        headers: { "Accept": "application/json" },
+                        body: formData
+                    });
+
+                // getting data
+                const data = await response.json();
+
+                // if request OK
+                if (response.ok === true) {
+                    // changing content and visibility of blocks on page
+                    document.getElementById("userName").innerText = data.username;
+                    document.getElementById("userInfo").style.display = "block";
+                    document.getElementById("loginForm").style.display = "none";
+                    // saving in sessionStorage access token
+                    sessionStorage.setItem(tokenKey, data.access_token);
+                } else {
+                    // if error occurs, getting error text from the errorText field
+                    console.log("Error: ", response.status, data.errorText);
+                }
+            };
+
+            // sending request to ValuesController
+            async function getData(url) {
+                const token = sessionStorage.getItem(tokenKey);
+
+                const response = await fetch(url,
+                    {
+                        method: "GET",
+                        headers: {
+                            "Accept": "application/json",
+                            "Authorization": `Bearer ${token}`  // sending token in headers
+                        }
+                    });
+                if (response.ok === true) {
+                    const data = await response.json();
+                    alert(data);
+                } else {
+                    console.log("Status: ", response.status);
+                }
+            };
+
+            // getting token
+            document.getElementById("submitLogin").addEventListener("click", e => {
+                e.preventDefault();
+                getTokenAsync();
+            });
+
+            // conditional exit - just removing token and changing the block visibility
+            document.getElementById("logOut").addEventListener("click", e => {
+                e.preventDefault();
+                document.getElementById("userName").innerText = "";
+                document.getElementById("userInfo").style.display = "none";
+                document.getElementById("loginForm").style.display = "block";
+                sessionStorage.removeItem(tokenKey);
+            });
+
+            // button to get user name - /api/values/getLogin
+            document.getElementById("getDataByLogin").addEventListener("click", e => {
+                e.preventDefault();
+                getData("/api/values/getlogin");
+            });
+
+            // button to get role - /api/values/getrole
+            document.getElementById("getDataByRole").addEventListener("click", e => {
+                e.preventDefault();
+                getData("/api/values/getrole");
+            });
+        </script>
+    </body>
+</html>
